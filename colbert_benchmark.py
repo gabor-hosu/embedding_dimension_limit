@@ -87,5 +87,6 @@ def benchmark(recall_at: int) -> float:
     return total / len(relevant_docs)
 
 
+# store_docs()
 for n_docs in [2, 10, 20]:
     print(f"Recall@{n_docs} = {benchmark(recall_at=n_docs)}")
