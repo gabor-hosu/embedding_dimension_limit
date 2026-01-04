@@ -352,6 +352,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pylate" },
     { name = "pymilvus", extra = ["milvus-lite"] },
+    { name = "sentence-transformers" },
 ]
 
 [package.metadata]
@@ -360,6 +361,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pylate", specifier = ">=1.3.4" },
     { name = "pymilvus", extras = ["milvus-lite"], specifier = ">=2.6.5" },
+    { name = "sentence-transformers", specifier = ">=5.1.1" },
 ]
 
 [[package]]
