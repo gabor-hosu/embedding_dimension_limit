@@ -1,22 +1,13 @@
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 from datasets import load_dataset
 
-corpus = load_dataset(
-    "json", data_files="./dataset/custom_limit_small/corpus.jsonl", split="all"
-)
-corpus = corpus.to_pandas()
+dataset_name = "orionweller/LIMIT-small"
+qrels = load_dataset(dataset_name, "default", split="all").to_pandas()
+corpus = load_dataset(dataset_name, "corpus", split="all").to_pandas()
+queries = load_dataset(dataset_name, "queries", split="all").to_pandas()
 
-qrels = load_dataset(
-    "json", data_files="./dataset/custom_limit_small/qrels.jsonl", split="all"
-)
-qrels = qrels.to_pandas()
 
-queries = load_dataset(
-    "json", data_files="./dataset/custom_limit_small/queries.jsonl", split="all"
-)
-queries = queries.to_pandas()
-
-client = MilvusClient("./dataset/custom_limit_small_milvus/milvus.db")
+client = MilvusClient("./dataset/limit_small_milvus/milvus.db")
 
 
 def store_docs():
@@ -97,6 +88,12 @@ def benchmark(recall_at: int) -> float:
     return total / len(relevant_docs)
 
 
-# store_docs()
-for n_docs in [2, 10, 20]:
-    print(f"Recall@{n_docs} = {benchmark(recall_at=n_docs)}")
+if __name__ == "__main__":
+    store_docs()
+    for n_docs in [2, 10, 20]:
+        print(f"Recall@{n_docs} = {benchmark(recall_at=n_docs)}")
+
+    # Results:
+    # Recall@2 = 0.9915
+    # Recall@10 = 1.0
+    # Recall@20 = 1.0
