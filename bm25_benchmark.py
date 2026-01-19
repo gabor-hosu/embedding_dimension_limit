@@ -1,16 +1,9 @@
 from pymilvus import MilvusClient, DataType, Function, FunctionType
 from datasets import load_dataset
-
-dataset_name = "orionweller/LIMIT-small"
-qrels = load_dataset(dataset_name, "default", split="all").to_pandas()
-corpus = load_dataset(dataset_name, "corpus", split="all").to_pandas()
-queries = load_dataset(dataset_name, "queries", split="all").to_pandas()
+import pandas as pd
 
 
-client = MilvusClient("./dataset/limit_small_milvus/milvus.db")
-
-
-def store_docs():
+def store_docs(corpus: pd.DataFrame, client: MilvusClient):
     schema = client.create_schema()
 
     schema.add_field(
@@ -53,7 +46,7 @@ def store_docs():
     )
 
 
-def retrieve_docs(top_k: int):
+def retrieve_docs(top_k: int, queries: pd.DataFrame, client: MilvusClient):
     search_params = {
         "params": {"drop_ratio_search": 0.2},
     }
@@ -77,8 +70,13 @@ def retrieve_docs(top_k: int):
     return retrieved_docs
 
 
-def benchmark(recall_at: int) -> float:
-    retrieved_docs = retrieve_docs(top_k=recall_at)
+def benchmark(
+    recall_at: int,
+    queries: pd.DataFrame,
+    qrels: pd.DataFrame,
+    client: MilvusClient,
+) -> float:
+    retrieved_docs = retrieve_docs(top_k=recall_at, queries=queries, client=client)
     relevant_docs = qrels.groupby("query-id")["corpus-id"].apply(set).to_dict()
 
     total = 0
@@ -88,12 +86,76 @@ def benchmark(recall_at: int) -> float:
     return total / len(relevant_docs)
 
 
+def benchmark_on(
+    db_collection_path: str,
+    top_ks: list[int],
+    dataset_name: str = None,
+    dataset_dir: str = None,
+    is_first_run: bool = False,
+):
+    if not dataset_name and not db_collection_path:
+        print("Warning: No dataset provided!")
+        return
+
+    if dataset_dir:
+        qrels = load_dataset(
+            "json", data_files=f"{dataset_dir}/qrels.jsonl", split="all"
+        ).to_pandas()
+        corpus = load_dataset(
+            "json", data_files=f"{dataset_dir}/corpus.jsonl", split="all"
+        ).to_pandas()
+        queries = load_dataset(
+            "json", data_files=f"{dataset_dir}/queries.jsonl", split="all"
+        ).to_pandas()
+    else:
+        qrels = load_dataset(dataset_name, "default", split="all").to_pandas()
+        corpus = load_dataset(dataset_name, "corpus", split="all").to_pandas()
+        queries = load_dataset(dataset_name, "queries", split="all").to_pandas()
+
+    client = MilvusClient(db_collection_path)
+
+    if is_first_run:
+        store_docs(corpus=corpus, client=client)
+
+    for top_k in top_ks:
+        print(
+            f"Recall@{top_k} = {benchmark(recall_at=top_k, queries=queries, qrels=qrels, client=client)}"
+        )
+
+
 if __name__ == "__main__":
-    store_docs()
-    for n_docs in [2, 10, 20]:
-        print(f"Recall@{n_docs} = {benchmark(recall_at=n_docs)}")
+    # benchmark_on(
+    #     dataset_name="orionweller/LIMIT-small",
+    #     db_collection_path="./dataset/limit_small_milvus/milvus.db",
+    #     top_ks=[2, 10, 20],
+    # )
 
     # Results:
     # Recall@2 = 0.9915
     # Recall@10 = 1.0
     # Recall@20 = 1.0
+
+    dataset_types = ["dense", "cyclic", "random", "disjoint"]
+    for dataset_type in dataset_types:
+        print(f"Dataset type: {dataset_type}")
+        benchmark_on(
+            dataset_dir=f"./dataset/limit_small_{dataset_type}",
+            db_collection_path=f"./dataset/limit_small_{dataset_type}/milvus.db",
+            top_ks=[2],
+            is_first_run=False,
+        )
+        print("-----------------------------------------------------------")
+
+    # Results:
+    # Dataset type: dense
+    # Recall@2 = 0.9565217391304348
+    # -----------------------------------------------------------
+    # Dataset type: cyclic
+    # Recall@2 = 0.9565217391304348
+    # -----------------------------------------------------------
+    # Dataset type: random
+    # Recall@2 = 0.9347826086956522
+    # -----------------------------------------------------------
+    # Dataset type: disjoint
+    # Recall@2 = 0.9130434782608695
+    # -----------------------------------------------------------
