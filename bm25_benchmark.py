@@ -93,7 +93,7 @@ def benchmark_on(
     dataset_dir: str = None,
     is_first_run: bool = False,
 ):
-    if not dataset_name and not db_collection_path:
+    if not dataset_name and not dataset_dir:
         print("Warning: No dataset provided!")
         return
 
@@ -128,6 +128,7 @@ if __name__ == "__main__":
     #     dataset_name="orionweller/LIMIT-small",
     #     db_collection_path="./dataset/limit_small_milvus/milvus.db",
     #     top_ks=[2, 10, 20],
+    #     is_first_run=True,
     # )
 
     # Results:
@@ -135,14 +136,19 @@ if __name__ == "__main__":
     # Recall@10 = 1.0
     # Recall@20 = 1.0
 
-    dataset_types = ["dense", "cyclic", "random", "disjoint"]
+    dataset_types = [
+        "dense",
+        "cyclic",
+        "random",
+        "disjoint",
+    ]
     for dataset_type in dataset_types:
         print(f"Dataset type: {dataset_type}")
         benchmark_on(
             dataset_dir=f"./dataset/limit_small_{dataset_type}",
             db_collection_path=f"./dataset/limit_small_{dataset_type}/milvus.db",
             top_ks=[2],
-            is_first_run=False,
+            is_first_run=True,
         )
         print("-----------------------------------------------------------")
 
