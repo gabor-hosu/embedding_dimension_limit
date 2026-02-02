@@ -7,26 +7,11 @@ import numpy as np
 model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device="cuda")
 
 
-def down_sample(
-    source_attributes: list[str],
-    target_attributes: list[str],
-) -> tuple[list[str], list[str]]:
-    if len(target_attributes) < len(source_attributes):
-        source_attributes = random.sample(source_attributes, len(target_attributes))
-        return source_attributes, target_attributes
-
-    target_attributes = random.sample(target_attributes, len(source_attributes))
-    return source_attributes, target_attributes
-
-
 def similarity(
     source_attributes: list[str],
     target_attributes: list[str],
     model: SentenceTransformer = model,
 ) -> float:
-    if len(source_attributes) != len(target_attributes):
-        raise ValueError("The source and target attributes length must be the same!")
-
     source_embeddings = model.encode(
         source_attributes,
         normalize_embeddings=True,
@@ -53,15 +38,34 @@ def similarity(
     return np.max(similarities, axis=-1).mean()
 
 
+def average_similarity(
+    source_attributes: list[str],
+    target_attributes: list[str],
+    num_of_samples: int = 3,
+    model: SentenceTransformer = model,
+):
+    """Calculates stable semantic similarity by averaging multiple independent encoding runs."""
+
+    if num_of_samples <= 0:
+        raise ValueError("The sample number must be a positive integer!")
+
+    accumulated_similarity = 0
+    for _ in range(num_of_samples):
+        accumulated_similarity += similarity(
+            source_attributes=source_attributes,
+            target_attributes=target_attributes,
+            model=model,
+        )
+
+    return accumulated_similarity / num_of_samples
+
+
 def filter_similar_words(
     source_attributes: list[str],
     target_attributes: list[str],
-    similarity_threshold: float = 0.6,
+    similarity_threshold: float = 0.3,
     model: SentenceTransformer = model,
 ) -> list[str]:
-    if len(source_attributes) != len(target_attributes):
-        raise ValueError("The source and target attributes length must be the same!")
-
     source_embeddings = model.encode(
         source_attributes,
         normalize_embeddings=True,
@@ -75,16 +79,39 @@ def filter_similar_words(
         batch_size=32,
     )
 
-    similarities = model.similarity(target_embeddings, source_embeddings)
-    similarities = similarities.cpu().numpy()
+    good_targets = []
+    source_len = len(source_attributes)
+    num_of_chunks = len(target_attributes) // source_len
 
-    rows, cols = np.where(similarities > similarity_threshold)
-    rows = np.unique(rows)
+    for i in range(num_of_chunks):
+        start_idx = i * source_len
+        end_idx = (i + 1) * source_len
+        target_embs = target_embeddings[start_idx:end_idx]
 
-    bad_indexes = set(rows)
-    all_indexes = set(list(range(len(target_attributes))))
-    good_indexes = all_indexes - bad_indexes
-    return [target_attributes[i] for i in good_indexes]
+        similarities = model.similarity(target_embs, source_embeddings)
+        similarities = similarities.cpu().numpy()
+
+        rows, cols = np.where(similarities > similarity_threshold)
+        bad_indexes = set(rows)
+        good_indexes = set(range(len(target_embs))) - bad_indexes
+
+        good_targets.extend([target_attributes[start_idx + j] for j in good_indexes])
+
+    remainder_start = num_of_chunks * source_len
+    if remainder_start < len(target_attributes):
+        target_embs = target_embeddings[remainder_start:]
+        similarities = model.similarity(target_embs, source_embeddings)
+        similarities = similarities.cpu().numpy()
+
+        rows, cols = np.where(similarities > similarity_threshold)
+        bad_indexes = set(rows)
+        good_indexes = set(range(len(target_embs))) - bad_indexes
+
+        good_targets.extend(
+            [target_attributes[remainder_start + j] for j in good_indexes]
+        )
+
+    return good_targets
 
 
 def main():
@@ -94,22 +121,16 @@ def main():
     df_train = pd.read_csv("./dataset/limit_dataset/generated_attributes.csv")
     source_attributes = df_train["liked_item"].to_list()
 
-    source_attributes, target_attributes = down_sample(
-        source_attributes, target_attributes
-    )
-
     filtered_attributes = filter_similar_words(
         source_attributes,
         target_attributes,
     )
 
-    source_attributes, filtered_attributes = down_sample(
-        source_attributes, filtered_attributes
+    cross_similarity = average_similarity(source_attributes, filtered_attributes)
+    target_self_similarity = average_similarity(
+        filtered_attributes, filtered_attributes
     )
-
-    cross_similarity = similarity(source_attributes, filtered_attributes)
-    target_self_similarity = similarity(filtered_attributes, filtered_attributes)
-    source_self_similarity = similarity(source_attributes, source_attributes)
+    source_self_similarity = average_similarity(source_attributes, source_attributes)
 
     print(f"len(filtered_attributes) = {len(filtered_attributes)}")
     print(f"Similarity target_attributes with source_attributes: {cross_similarity}")
@@ -131,3 +152,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # Results:
+    # len(filtered_attributes) = 1857
+    # Similarity target_attributes with source_attributes: 0.26390916109085083
+    # Inner similarity of target_attributes: 0.6524001359939575
+    # Inner similarity of source_attributes: 0.6683806777000427

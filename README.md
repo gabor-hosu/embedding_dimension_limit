@@ -7,4 +7,4 @@ The codebase is organized into multiple Jupyter notebooks and Python scripts. Ex
 - NVIDIA T4 and P100 GPUs on Kaggle
 - NVIDIA GeForce GTX 1650 on a local machine
 
-The accompanying presentation provides an overview of the repository structure and explains how the code is intended to be used. Additional details and documentation will be added to this README soon.
+The presentation provides an overview of the repository structure and explains how the code is intended to be used. Additional details and documentation will be added to this README soon.
