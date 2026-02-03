@@ -28,6 +28,14 @@ Experiments were conducted on:
 - NVIDIA T4 and P100 GPUs (Kaggle)
 - NVIDIA GeForce GTX 1650 (local machine)
 
+## Models
+
+Due to hardware constraints, larger models in the 7–8B parameter range were quantized to 4-bit precision. These quantized variants were created specifically for this project and are available on Hugging Face:
+
+- [intfloat/e5-mistral-7b-instruct (4-bit quantized)](https://huggingface.co/gabor-hosu/e5-mistral-7b-instruct-bnb-4bit)
+- [GritLM/GritLM-7B (4-bit quantized)](https://huggingface.co/gabor-hosu/GritLM-7B-bnb-4bit)
+- [Qwen/Qwen3-Embedding-8B (4-bit quantized)](https://huggingface.co/gabor-hosu/Qwen3-Embedding-8B-bnb-4bit)
+
 ## Usage
 
-The accompanying presentation explains the results, the theory behind the paper, and the reproduced experiments. Additional documentation and examples will be added here soon.
+The accompanying (`presentation.pdf`) presentation explains the results, the theory behind the paper, and the reproduced experiments. Additional documentation and examples will be added here soon.
