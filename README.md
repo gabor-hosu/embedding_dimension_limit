@@ -47,6 +47,7 @@ Available datasets:
 - [LIMIT-small-disjoint](https://huggingface.co/datasets/gabor-hosu/LIMIT-small-disjoint) - Disjoint relevance: queries have non-overlapping relevant documents.
 - [LIMIT-small-cyclic](https://huggingface.co/datasets/gabor-hosu/LIMIT-small-cyclic) - Cyclic relevance pattern: relevance relationships form a cycle across queries.
 - [LIMIT-small-random](https://huggingface.co/datasets/gabor-hosu/LIMIT-small-random) - Random relevance assignments: queries have randomly selected relevant documents.
+- [LIMIT-train](https://huggingface.co/datasets/gabor-hosu/LIMIT-train) - Self-produced train split of the [LIMIT](https://huggingface.co/datasets/orionweller/LIMIT) dataset.
 
 ## Usage
 
